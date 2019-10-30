@@ -2,18 +2,17 @@
 
 namespace Trovimap\Propertista\TrovimapPhpClient\Models;
 
-class BuildingUnit
+class BuildingUnit extends BaseModel
 {
     public $Id; //String
     public $BuildingUnitId; //String
     public $ParcelId; //String
     public $YearBuilt; //String
-    public $Apartments; //array(Object)
+    public $Apartments = []; //array(Object)
 
     public function __construct(array $data) {
-        foreach ($data as $key => $value) {
-            $this->{$key} = $value;
-        }
+
+        parent::__construct($data);
 
         foreach ($data['Apartments'] as $apartment) {
             array_push($this->Apartments, new Apartment($apartment));

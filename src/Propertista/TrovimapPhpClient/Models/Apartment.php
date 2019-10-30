@@ -7,7 +7,7 @@ class Characteristics
     public $Location; //Location
 }
 
-class Apartment
+class Apartment extends BaseModel
 {
     public $Id; //String
     public $FormattedAddress; //String
@@ -24,8 +24,9 @@ class Apartment
 
     public function __construct(array $data)
     {
-        foreach ($data as $key => $value) {
-            $this->{$key} = $value;
+        parent::__construct($data);
+        foreach ($data['Characteristics'] as $key => $value) {
+            $this->Characteristics[$key] = $value;
         }
     }
 }

@@ -14,10 +14,12 @@ use Trovimap\Propertista\TrovimapPhpClient\Models\Request\EvaluationRequest;
 class Trovimap {
     
     private $client;
+    private $cacheDriver;
 
-    public function __construct(Client $client)
+    public function __construct(Client $client, $cacheDriver)
     {
         $this->client = $client;
+        $this->cacheDriver = $cacheDriver;
     }
 
     /**
@@ -26,13 +28,24 @@ class Trovimap {
     public function getParcelByAddress(string $address) {
 
         try {
-            $response = $this->client->get('cma/free/parcel', [
-                'query' => [
-                    'address' => $address
-                ]
-            ]);
+
+            $hash = md5($address);
+            if (!$this->cacheDriver->has($hash)) {
             
-            $data = json_decode($response->getBody(), true);
+                $response = $this->client->get('cma/free/parcel', [
+                    'query' => [
+                        'address' => $address
+                    ]
+                ]);
+                
+                $data = json_decode($response->getBody(), true);
+            
+                $this->cacheDriver->set($hash, $data, 30000);// 5 minutes
+
+            } else {
+                // Getter action
+                $data = $this->cacheDriver->get($hash);
+            }
 
             return array_map(function($element) {
                 return new Parcel($element);
@@ -47,9 +60,18 @@ class Trovimap {
         $uri = 'cma/free/parcel/' . $parcelId . '/building';
         
         try {
-            $response = $this->client->get($uri);
+
+            $hash = md5($uri);
+            if (!$this->cacheDriver->has($hash)) {
+                $response = $this->client->get($uri);
             
-            $data = json_decode($response->getBody(), true);
+                $data = json_decode($response->getBody(), true);
+                
+                $this->cacheDriver->set($hash, $data, 30000);// 5 minutes
+            } else {
+                // Getter action
+                $data = $this->cacheDriver->get($hash);
+            } 
 
             return array_map(function($buildingUnit) {
                 return new BuildingUnit($buildingUnit);
@@ -92,13 +114,26 @@ class Trovimap {
 
     public function evaluate(string $buildingUnitId, EvaluationRequest $data) {
         $uri = 'cma/free/apartment/' . $buildingUnitId . '/evaluate/comparables';
-        $uri = 'https://demo.trovimap.com/api/v2/cma/free/apartment/8_900_1213625DF3811C_001_10/evaluate/comparables';
+
+        $hash = md5(json_encode([
+            $uri, 
+            $data
+        ]));
+        // $uri = 'https://demo.trovimap.com/api/v2/cma/free/apartment/8_900_1213625DF3811C_001_10/evaluate/comparables';
         try {
-            $response = $this->client->post($uri, [
-                'body' => json_encode($data),
-            ]);
-            
-            $data = json_decode($response->getBody(), true);
+            if(!$this->cacheDriver->has($hash)){
+
+                $response = $this->client->post($uri, [
+                    'body' => json_encode($data),
+                ]);
+                
+                $data = json_decode($response->getBody(), true);
+
+                $this->cacheDriver->set($hash, $data, 30000);// 5 minutes
+            } else {
+                // Getter action
+                $data = $this->cacheDriver->get($hash);
+            }
 
             return new Evaluation($data);
         } catch (ClientException $e) {

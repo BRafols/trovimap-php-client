@@ -3,6 +3,7 @@
 namespace Trovimap\Propertista\TrovimapPhpClient;
 
 use GuzzleHttp\Client;
+use Phpfastcache\Helper\Psr16Adapter;
 
 class TrovimapFactory {
 
@@ -17,7 +18,10 @@ class TrovimapFactory {
             ]
         ]);
 
-        return new Trovimap($client);
+        $defaultDriver = 'Files';
+        $cacheDriver = new Psr16Adapter($defaultDriver);        
+
+        return new Trovimap($client, $cacheDriver);
     }
 
 }

@@ -2,7 +2,7 @@
 
 namespace Trovimap\Propertista\TrovimapPhpClient\Models;
 
-class Parcel {
+class Parcel extends BaseModel {
     public $Id; //String
     public $Location; //Location
     public $DistrictId; //int
@@ -14,8 +14,8 @@ class Parcel {
     public $City; //String
 
     public function __construct(array $data) {
-        foreach ($data as $key => $value) {
-            $this->{$key} = $value;
-        }
+        parent::__construct($data);
+
+        $this->Location = new Location($data['Location']);
     }
 }

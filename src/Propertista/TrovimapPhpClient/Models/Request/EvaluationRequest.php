@@ -3,6 +3,7 @@
 namespace Trovimap\Propertista\TrovimapPhpClient\Models\Request;
 
 use JsonSerializable;
+use Trovimap\Propertista\TrovimapPhpClient\Exceptions\EvaluationRequestNotValidException;
 
 class EvaluationRequest implements JsonSerializable {
     public $ApartmentId; //String
@@ -29,7 +30,17 @@ class EvaluationRequest implements JsonSerializable {
     public $Type; //int
     public $ViewType; //String
 
+    protected $requiredFields = [
+        "ApartmentId",
+        "ParcelId",
+        "LivingArea",
+        "Location"
+    ];
+
     public function __construct(array $data) {
+        if(!$this->isValid($data)) {
+            throw new EvaluationRequestNotValidException();
+        }
         foreach ($data as $key => $value) {
             $this->{$key} = $value;
         }
@@ -40,5 +51,11 @@ class EvaluationRequest implements JsonSerializable {
         return array_filter(get_object_vars($this), function($value) {
             return !is_null($value) && $value !== '';
         });
+    }
+
+    private function isValid($data) {
+        return count(array_filter($this->requiredFields, function($field) use ($data) {
+            return !array_key_exists($field, $data) || is_null($data[$field]);
+        })) === 0;
     }
 }

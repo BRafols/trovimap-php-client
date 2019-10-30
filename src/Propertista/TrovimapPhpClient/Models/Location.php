@@ -2,7 +2,7 @@
 
 namespace Trovimap\Propertista\TrovimapPhpClient\Models;
 
-class Location {
-    public $Lat; //double
-    public $Lon; //double
+class Location extends BaseModel {
+    public $lat; //double
+    public $lon; //double
 }
