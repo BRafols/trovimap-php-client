@@ -2,6 +2,8 @@
 
 namespace Trovimap\Propertista\TrovimapPhpClient\Models;
 
+use ArrayAccess;
+
 class PriceHistory
 {
     public $Date; //Date

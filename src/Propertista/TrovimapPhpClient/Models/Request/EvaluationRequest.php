@@ -3,6 +3,8 @@
 namespace Trovimap\Propertista\TrovimapPhpClient\Models\Request;
 
 use JsonSerializable;
+use ReflectionClass;
+use ReflectionProperty;
 use Trovimap\Propertista\TrovimapPhpClient\Exceptions\EvaluationRequestNotValidException;
 
 class EvaluationRequest implements JsonSerializable {
@@ -46,11 +48,28 @@ class EvaluationRequest implements JsonSerializable {
         }
     }
 
-    public function jsonSerialize()
+    public function jsonSerializeV2()
     {
         return array_filter(get_object_vars($this), function($value) {
             return !is_null($value) && $value !== '';
         });
+    }
+
+    public function jsonSerialize()
+    {
+        $reflect = new ReflectionClass($this);
+        $props   = $reflect->getProperties(ReflectionProperty::IS_PUBLIC);
+        $values = [];
+
+        array_walk($props, function($property) use (&$values) {
+
+            if (!is_null($this->{$property->name}) && $this->{$property->name} !== '') {
+                $values[$property->name] = $this->{$property->name};
+            }
+        });
+
+        return $values;
+        
     }
 
     private function isValid($data) {

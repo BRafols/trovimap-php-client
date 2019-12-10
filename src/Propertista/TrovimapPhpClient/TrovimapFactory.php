@@ -15,9 +15,10 @@ class TrovimapFactory {
             'base_uri' => 'https://demo.trovimap.com/api/v2/',
             'headers' => [
                 'X-Trovimap-Token' => $token
-            ]
+            ],
+            'proxy' => '18.197.96.203:3128',
         ]);
-
+        
         $defaultDriver = 'Files';
         $cacheDriver = new Psr16Adapter($defaultDriver);        
 

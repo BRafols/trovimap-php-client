@@ -5,6 +5,10 @@ namespace Trovimap\Propertista\TrovimapPhpClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
+use Trovimap\Exception\AddressNotFoundException;
+use Trovimap\Exception\CadastralReferenceNotFoundException;
+use Trovimap\Exception\EvaluationException;
+use Trovimap\Exception\PermissionErrorException;
 use Trovimap\Propertista\TrovimapPhpClient\Models\BuildingUnit;
 use Trovimap\Propertista\TrovimapPhpClient\Models\Characteristic;
 use Trovimap\Propertista\TrovimapPhpClient\Models\Evaluation;
@@ -13,6 +17,10 @@ use Trovimap\Propertista\TrovimapPhpClient\Models\Request\EvaluationRequest;
 
 class Trovimap {
     
+    const ADDRESS_NOT_FOUND = 'no_such_address';
+    const CADASTRAL_NOT_FOUND = 'cadastrial_reference_invalid';
+    const PERMISSION_ERROR = 'permission_error';
+
     private $client;
     private $cacheDriver;
 
@@ -51,6 +59,18 @@ class Trovimap {
                 return new Parcel($element);
             }, $data);
         } catch (ClientException $e) {
+            if ($e->hasResponse()) {
+                $response = json_decode($e->getResponse()->getBody()->getContents());
+
+                if ($response->error === static::ADDRESS_NOT_FOUND) {
+                    throw new AddressNotFoundException();
+                } else if ($response->error === static::PERMISSION_ERROR) {
+                    throw new PermissionErrorException();
+                }
+                
+                dd(stream_get_contents($response->getBody()));
+            }
+            dd($e->getResponse()->getBody());
             dd(json_decode($e->getResponse()->getBody()));
         }
     }
@@ -71,11 +91,9 @@ class Trovimap {
             } else {
                 // Getter action
                 $data = $this->cacheDriver->get($hash);
-            } 
+            }
 
-            return array_map(function($buildingUnit) {
-                return new BuildingUnit($buildingUnit);
-            }, $data);
+            return new BuildingUnit($data[0]);
         } catch (ClientException $e) {
             dd(json_decode($e->getResponse()->getBody()));
         }
@@ -86,15 +104,22 @@ class Trovimap {
         $uri = 'cma/free/parcel/by-cadastral/' . $reference . '/building';
         
         try {
-            $response = $this->client->get($uri);
+            $response = $this->client->get($uri);            
             
             $data = json_decode($response->getBody(), true);
 
-            return array_map(function($buildingUnit) {
-                return new BuildingUnit($buildingUnit);
-            }, $data);
+            return new BuildingUnit($data[0]);
         } catch (ClientException $e) {
-            dd(json_decode($e->getResponse()->getBody()));
+            if ($e->hasResponse()) {
+                $response = json_decode($e->getResponse()->getBody()->getContents());
+                if ($response->error === static::CADASTRAL_NOT_FOUND) {
+                    throw new CadastralReferenceNotFoundException();
+                } else if ($response->error === static::PERMISSION_ERROR) {
+                    throw new PermissionErrorException();
+                } else {
+                    throw $e;
+                }
+            }
         }
     }
 
@@ -105,7 +130,7 @@ class Trovimap {
             $response = $this->client->get($uri);
             
             $data = json_decode($response->getBody(), true);
-
+            
             return new Characteristic($data);
         } catch (ClientException $e) {
             dd(json_decode($e->getResponse()->getBody()));
@@ -119,12 +144,13 @@ class Trovimap {
             $uri, 
             $data
         ]));
+        
         // $uri = 'https://demo.trovimap.com/api/v2/cma/free/apartment/8_900_1213625DF3811C_001_10/evaluate/comparables';
         try {
             if(!$this->cacheDriver->has($hash)){
 
                 $response = $this->client->post($uri, [
-                    'body' => json_encode($data),
+                    'body' => json_encode($data, JSON_NUMERIC_CHECK),
                 ]);
                 
                 $data = json_decode($response->getBody(), true);
@@ -137,10 +163,9 @@ class Trovimap {
 
             return new Evaluation($data);
         } catch (ClientException $e) {
-            dd($e->getResponse());
-            dd(json_decode($e->getResponse()->getBody()));
+            throw new EvaluationException();
         } catch (ServerException $e) {
-            dd($e);
+            throw new EvaluationException();
         }
     }
 
@@ -152,7 +177,7 @@ class Trovimap {
      * @return void
      */
     public function download(string $buildingUnitId, $path) {
-        $uri = 'cma/free/apartment/' . $buildingUnitId . '/evaluate/comparables';
+        $uri = 'cma/free/evaluation/' . $buildingUnitId . '/download-report';
 
         $response = $this->client->get($uri, ['save_to' => $path]);
 

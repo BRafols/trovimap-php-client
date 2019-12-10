@@ -1,5 +1,5 @@
 {
-    "name": "borja/trovimap-php-client",
+    "name": "borja/trovimap-php-client-test",
     "description": "Simple client to interact with trovimap evaluation API",
     "type": "library",
     "require": {
@@ -26,7 +26,8 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Trovimap\\TrovimapServiceProvider"
+                "Trovimap\\TrovimapServiceProvider",
+                "Trovimap\\TrovimapEventServiceProvider"
             ]
         }
     }
